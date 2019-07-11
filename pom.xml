@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.github.museadmin</groupId>
+    <artifactId>api-client-throttle</artifactId>
+    <name>api-client-throttle</name>
+    <description>Handle API rate throttling from the client side</description>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <developers>
+        <developer>
+            <name>Bradley Atkins</name>
+            <email>bradley.atkins@bjss.com</email>
+            <organization>Muse</organization>
+            <organizationUrl>https://github.com/museadmin/api-client-throttle</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>git@github.com:museadmin/infinite-state-machine.git</connection>
+        <developerConnection>git@github.com:museadmin/infinite-state-machine.git</developerConnection>
+        <url>https://github.com/museadmin/infinite-state-machine</url>
+    </scm>
+
+</project>
