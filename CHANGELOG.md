@@ -6,9 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0] - 11-06-2019
+## [1.0] - 12-06-2019
 ### Added
 - Added Changelog and Readme
 - Update pom with developer details
+- Created throttle
+- Created requestor
+- Created unit tests
 - Uploaded to Github
 
