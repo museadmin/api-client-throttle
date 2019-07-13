@@ -9,17 +9,15 @@ import java.util.stream.IntStream;
 
 import static java.lang.Thread.sleep;
 import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static sun.security.krb5.Confounder.longValue;
 
 public class TestAPIClientThrottle {
 
   private void registerNumberOfRequestors(Integer number, APIClientThrottle throttle) {
-    IntStream.range(0, 10).forEach(
+    IntStream.range(0, number).forEach(
         nbr -> {
           APIClientRequestor r = new APIClientRequestor();
           r.enQueue();
-          throttle.addRequestor(r);
+          throttle.registerRequestor(r);
         }
     );
   }
@@ -57,16 +55,34 @@ public class TestAPIClientThrottle {
     assertTrue(throttle.numberOfQueueItems() == 0);
   }
 
-  /**
-   * 1 - test throws runtime exception with empty q on start
-   * 2 - reset changes latency
-   * 3 - q is emptied after registering n requestors
-   * 4 - Add single requestor and assert we can wait for inhibited == false
-   *     sleep(2000);
-   *
-   *     throttle.stop();
-   *
-   *     String str = "Junit is working fine";
-   *     assertEquals("Junit is working fine",str);
-   */
+  @Test
+  public void testWaitWhileInhibited() throws InterruptedException {
+    // This test expresses the intended usage for applications.
+    // It registers 11 requestors and waits in a loop for the 11th
+    // requestor to reach the head of the Q and be dis-inhibited.
+    // All eleven requestors are dis-inhibited sequentially, one every 200 ms
+    APIClientThrottle throttle = new APIClientThrottle();
+    throttle.setLatency(200);
+
+    registerNumberOfRequestors(10, throttle);
+    APIClientRequestor r = new APIClientRequestor();
+    // Register the 11th requestor with the throttle
+    throttle.registerRequestor(r);
+
+    // Can now request to be added to the throttle's Q asynchronously
+    r.enQueue();
+
+    // Now loop every <latency> ms maintaining the queue
+    throttle.start();
+    int loops = 0;
+    // Wait until 11th requestor reaches head of Q and is dis-inhibited
+    while (r.inhibited) {
+      loops++;
+      sleep(10);
+    }
+    throttle.stop();
+
+    // Confirm we looped while waiting for Q to be processed
+    assertTrue(loops > 150);
+  }
 }

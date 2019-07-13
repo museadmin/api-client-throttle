@@ -32,9 +32,6 @@ public class APIClientThrottle {
   private ScheduledFuture<?> throttleHandle = null;
 
   // Requestor ArrayList and Queue for indexes
-  public void addRequestor(APIClientRequestor requestor) {
-    requestors.add(requestor);
-  }
   private ArrayList<APIClientRequestor> requestors = new ArrayList<>();
   private Queue<Integer> requestQueue = new LinkedList<>();
 
@@ -50,7 +47,8 @@ public class APIClientThrottle {
   // ================= methods =================
 
   /**
-   * Register an API Requestor
+   * Register an API Requestor. e.g. Add it to the internal array
+   * of requestors so that it can be enqueued and dequeued
    * @param requestor APIClientRequestor
    */
   public void registerRequestor(APIClientRequestor requestor) {
@@ -95,7 +93,10 @@ public class APIClientThrottle {
    * the requestor at the head of the queue.
    */
   final Runnable throttle = () -> {
-    if (this.requestors.size() != 0) {
+    // If we have no requestors then just skip and wait for
+    // developer to figure it out. Throwing an exception from
+    // inside a Lambda is too messy.
+    if (this.requestors.size() > 0) {
       // Look for any new requests to join the queue
       APIClientRequestor r;
       for (Integer i = 0; i < requestors.size(); i++) {
@@ -106,7 +107,8 @@ public class APIClientThrottle {
         }
       }
 
-      // If anything in queue then pop off the head
+      // If anything in queue then pop off the head of
+      // the Q and dis-inhibit it.
       if (requestQueue.size() > 0) {
         Integer index = requestQueue.remove();
         if (index != null) {

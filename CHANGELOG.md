@@ -15,3 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created unit tests
 - Uploaded to Github
 
+## [1.0] - 13-06-2019
+### Added
+- Completed unit tests
