@@ -35,8 +35,8 @@ public class TestAPIClientThrottle {
     throttle.setLatency(1000);
     throttle.setLatencyOffset(100);
     throttle.incrementLatency();
-    assertTrue(throttle.getLatency() == 1100);
-    assertTrue(throttle.getLatencyOffset() == 100);
+    assertEquals(1100, (int) throttle.getLatency());
+    assertEquals(100, (int) throttle.getLatencyOffset());
   }
 
   @Test
@@ -61,10 +61,8 @@ public class TestAPIClientThrottle {
     // Test would complete in 3 second but adding decrement should reduce that
     throttle.decrementLatency();
 
-    int loops = 0;
     // Wait until 6th requestor reaches head of Q and is dis-inhibited
     while (r.inhibited) {
-      loops++;
       sleep(10);
     }
 
@@ -73,10 +71,10 @@ public class TestAPIClientThrottle {
     // Capture finish time
     Long endS = Instant.now().getEpochSecond();
 
-    Long testDuration = endS - startS;
+    long testDuration = endS - startS;
 
     assertTrue(testDuration < 3);
-    assertTrue(throttle.getLatency() == 200);
+    assertEquals(200, (int) throttle.getLatency());
   }
 
   @Test
@@ -101,10 +99,8 @@ public class TestAPIClientThrottle {
     // Test would complete in 1 second but adding increment should extend that
     throttle.incrementLatency();
 
-    int loops = 0;
     // Wait until 6th requestor reaches head of Q and is dis-inhibited
     while (r.inhibited) {
-      loops++;
       sleep(10);
     }
 
@@ -113,10 +109,10 @@ public class TestAPIClientThrottle {
     // Capture finish time
     Long endS = Instant.now().getEpochSecond();
 
-    Long testDuration = endS - startS;
+    long testDuration = endS - startS;
 
     assertTrue(testDuration > 1);
-    assertTrue(throttle.getLatency() == 400);
+    assertEquals(400, (int) throttle.getLatency());
   }
 
   @Test
@@ -226,7 +222,7 @@ public class TestAPIClientThrottle {
     // Points to the same instance of the requestor in the throttle
     private APIClientRequestor requestor;
 
-    public TestSvc(APIClientRequestor requestor, String name) {
+    TestSvc(APIClientRequestor requestor, String name) {
       this.requestor = requestor;
       this.threadName = name;
     }
@@ -246,7 +242,7 @@ public class TestAPIClientThrottle {
       // after waiting for its place at the head of the queue.
     }
 
-    public void start () {
+    void start() {
       if (t == null) {
         t = new Thread (this, threadName);
         t.start ();
