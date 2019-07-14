@@ -3,8 +3,10 @@ package com.github.museadmin.api_client_throttle_test;
 import com.github.museadmin.api_client_throttle.APIClientRequestor;
 import com.github.museadmin.api_client_throttle.APIClientThrottle;
 
+import org.junit.Before;
 import org.junit.Test;
 
+import java.time.Instant;
 import java.util.stream.IntStream;
 
 import static java.lang.Thread.sleep;
@@ -12,6 +14,7 @@ import static junit.framework.TestCase.*;
 
 public class TestAPIClientThrottle {
 
+  private APIClientThrottle throttle;
   private void registerNumberOfRequestors(Integer number, APIClientThrottle throttle) {
     IntStream.range(0, number).forEach(
         nbr -> {
@@ -22,16 +25,108 @@ public class TestAPIClientThrottle {
     );
   }
 
+  @Before
+  public void setUp() {
+    throttle = new APIClientThrottle();
+  }
+
+  @Test
+  public void testIncrementLatencyRestingThrottle() {
+    throttle.setLatency(1000);
+    throttle.setLatencyOffset(100);
+    throttle.incrementLatency();
+    assertTrue(throttle.getLatency() == 1100);
+    assertTrue(throttle.getLatencyOffset() == 100);
+  }
+
+  @Test
+  public void testDecrementLatencyRunningThrottle() throws InterruptedException {
+    throttle.setLatency(500);
+    throttle.setLatencyOffset(300);
+
+    registerNumberOfRequestors(5, throttle);
+    APIClientRequestor r = new APIClientRequestor();
+    // Register the 6th requestor with the throttle
+    throttle.registerRequestor(r);
+
+    // Can now request to be added to the throttle's Q asynchronously
+    r.enQueue();
+
+    // Capture start time
+    Long startS = Instant.now().getEpochSecond();
+
+    // Now loop every <latency> ms maintaining the queue
+    throttle.start();
+
+    // Test would complete in 3 second but adding decrement should reduce that
+    throttle.decrementLatency();
+
+    int loops = 0;
+    // Wait until 6th requestor reaches head of Q and is dis-inhibited
+    while (r.inhibited) {
+      loops++;
+      sleep(10);
+    }
+
+    throttle.stop();
+
+    // Capture finish time
+    Long endS = Instant.now().getEpochSecond();
+
+    Long testDuration = endS - startS;
+
+    assertTrue(testDuration < 3);
+    assertTrue(throttle.getLatency() == 200);
+  }
+
+  @Test
+  public void testIncrementLatencyRunningThrottle() throws InterruptedException {
+    throttle.setLatency(100);
+    throttle.setLatencyOffset(300);
+
+    registerNumberOfRequestors(5, throttle);
+    APIClientRequestor r = new APIClientRequestor();
+    // Register the 6th requestor with the throttle
+    throttle.registerRequestor(r);
+
+    // Can now request to be added to the throttle's Q asynchronously
+    r.enQueue();
+
+    // Capture start time
+    Long startS = Instant.now().getEpochSecond();
+
+    // Now loop every <latency> ms maintaining the queue
+    throttle.start();
+
+    // Test would complete in 1 second but adding increment should extend that
+    throttle.incrementLatency();
+
+    int loops = 0;
+    // Wait until 6th requestor reaches head of Q and is dis-inhibited
+    while (r.inhibited) {
+      loops++;
+      sleep(10);
+    }
+
+    throttle.stop();
+
+    // Capture finish time
+    Long endS = Instant.now().getEpochSecond();
+
+    Long testDuration = endS - startS;
+
+    assertTrue(testDuration > 1);
+    assertTrue(throttle.getLatency() == 400);
+  }
+
   @Test
   public void testSetLatency() {
-    APIClientThrottle throttle = new APIClientThrottle();
     throttle.setLatency(1000);
     assertEquals(1000, (int) throttle.getLatency());
   }
 
   @Test
   public void testResetLatency() {
-    APIClientThrottle throttle = new APIClientThrottle();
     throttle.setLatency(1000);
     throttle.resetLatency(200);
     assertEquals(200, (int) throttle.getLatency());
@@ -39,14 +134,12 @@ public class TestAPIClientThrottle {
 
   @Test
   public void testRequestorsAreRegistered() {
-    APIClientThrottle throttle = new APIClientThrottle();
     registerNumberOfRequestors(10, throttle);
     assertEquals(10, (int) throttle.numberOfRequestors());
   }
 
   @Test
   public void testQueueIsEmptied() throws InterruptedException {
-    APIClientThrottle throttle = new APIClientThrottle();
     registerNumberOfRequestors(10, throttle);
     throttle.setLatency(100);
     throttle.start();
@@ -61,7 +154,6 @@ public class TestAPIClientThrottle {
     // It registers 11 requestors and waits in a loop for the 11th
     // requestor to reach the head of the Q and be dis-inhibited.
     // All eleven requestors are dis-inhibited sequentially, one every 200 ms
-    APIClientThrottle throttle = new APIClientThrottle();
     throttle.setLatency(200);
 
     registerNumberOfRequestors(10, throttle);
@@ -86,46 +178,9 @@ public class TestAPIClientThrottle {
     assertTrue(loops > 150);
   }
 
-  /**
-   * Test class mimics a service that is waiting for
-   * its turn to hit the head of the queue
-   */
-  class TestSvc implements Runnable {
-
-    private Thread t;
-    private String threadName;
-    public APIClientRequestor requestor;
-
-    public TestSvc(APIClientRequestor requestor, String name) {
-      this.requestor = requestor;
-      this.threadName = name;
-    }
-
-    public void run() {
-      int loops = 0;
-      while (requestor.inhibited) {
-        loops++;
-        try {
-          sleep(10);
-        } catch (InterruptedException e) {
-          System.out.println("Thread " +  threadName + " interrupted.");
-          break;
-        }
-      }
-    }
-
-    public void start () {
-      if (t == null) {
-        t = new Thread (this, threadName);
-        t.start ();
-      }
-    }
-  }
-
   @Test
   public void testThreadsWaitWhileInhibited() throws InterruptedException {
 
-    APIClientThrottle throttle = new APIClientThrottle();
     throttle.setLatency(200);
 
     // Add some bulk to the throttle load
@@ -156,4 +211,47 @@ public class TestAPIClientThrottle {
     assertFalse(r1.inhibited);
     assertFalse(r2.inhibited);
   }
+
+  /**
+   * Test class mimics a service that is waiting for
+   * its turn to hit the head of the queue. This can be
+   * used as an example of how to implement a throttled
+   * service.
+   */
+  class TestSvc implements Runnable {
+
+    private Thread t;
+    private String threadName;
+
+    // Points to the same instance of the requestor in the throttle
+    private APIClientRequestor requestor;
+
+    public TestSvc(APIClientRequestor requestor, String name) {
+      this.requestor = requestor;
+      this.threadName = name;
+    }
+
+    public void run() {
+
+      // Requestor is dis-inhibited after reaching the head of the queue.
+      while (requestor.inhibited) {
+        try {
+          sleep(10);
+        } catch (InterruptedException e) {
+          System.out.println("Thread " +  threadName + " interrupted.");
+          break;
+        }
+      }
+      // This is where a real client would send out the API request
+      // after waiting for its place at the head of the queue.
+    }
+
+    public void start () {
+      if (t == null) {
+        t = new Thread (this, threadName);
+        t.start ();
+      }
+    }
+  }
+
 }

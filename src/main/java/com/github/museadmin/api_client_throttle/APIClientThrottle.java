@@ -25,16 +25,6 @@ public class APIClientThrottle {
 
   // ================= variables =================
 
-  // Scheduler
-  private final ScheduledExecutorService scheduler =
-      Executors.newScheduledThreadPool(1);
-
-  private ScheduledFuture<?> throttleHandle = null;
-
-  // Requestor ArrayList and Queue for indexes
-  private ArrayList<APIClientRequestor> requestors = new ArrayList<>();
-  private Queue<Integer> requestQueue = new LinkedList<>();
-
   // The latency
   public Integer getLatency() {
     return latency;
@@ -44,7 +34,67 @@ public class APIClientThrottle {
   }
   private Integer latency;
 
+  // Latency increment
+  public Integer getLatencyOffset() {
+    return latencyOffset;
+  }
+  public void setLatencyOffset(Integer latencyOffset) {
+    this.latencyOffset = latencyOffset;
+  }
+  private Integer latencyOffset = 0;
+
+  // Requestor ArrayList and Queue for indexes
+  private ArrayList<APIClientRequestor> requestors = new ArrayList<>();
+  private Queue<Integer> requestQueue = new LinkedList<>();
+
+  // Scheduler
+  private final ScheduledExecutorService scheduler =
+      Executors.newScheduledThreadPool(1);
+  private ScheduledFuture<?> throttleHandle = null;
+
   // ================= methods =================
+
+  /**
+   * Decrement the latency used by latencyOffset and
+   * return the value. This will be critical for anyone
+   * implementing a self adjusting API rate that reacts to
+   * throttling.
+   * @return Integer the incremented latency
+   */
+  public Integer decrementLatency() {
+
+    Integer i = latency - latencyOffset;
+
+    if (this.throttleHandle != null) {
+      stop();
+      latency = i;
+      start();
+    } else {
+      latency = i;
+    }
+    return i;
+  }
+
+  /**
+   * Increment the latency used by latencyOffset and
+   * return the value. This will be critical for anyone
+   * implementing a self adjusting API rate that reacts to
+   * throttling.
+   * @return Integer the incremented latency
+   */
+  public Integer incrementLatency() {
+
+    Integer i = latency + latencyOffset;
+
+    if (this.throttleHandle != null) {
+      stop();
+      latency = i;
+      start();
+    } else {
+      latency = i;
+    }
+    return i;
+  }
 
   /**
    * Register an API Requestor. e.g. Add it to the internal array
@@ -73,7 +123,7 @@ public class APIClientThrottle {
    */
   public void start(){
     if (this.latency > 0) {
-      this.scheduler.scheduleAtFixedRate(throttle, 0, this.latency, MILLISECONDS);
+      throttleHandle = scheduler.scheduleAtFixedRate(throttle, 0, this.latency, MILLISECONDS);
     }
   }
 
@@ -82,7 +132,8 @@ public class APIClientThrottle {
    */
   public void stop() {
     if (this.throttleHandle != null) {
-      this.throttleHandle.cancel(true);
+      throttleHandle.cancel(true);
+      throttleHandle = null;
     }
   }
 

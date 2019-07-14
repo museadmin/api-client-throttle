@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created unit tests
 - Uploaded to Github
 
-## [1.0] - 13-06-2019
+## [1.0] - 14-06-2019
 ### Added
+- Increment and Decrement functions for latency
 - Completed unit tests
