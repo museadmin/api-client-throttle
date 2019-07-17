@@ -1,14 +1,30 @@
 package com.github.museadmin.api_client_throttle;
 
+import static java.lang.Thread.sleep;
+
 /**
  * Requestor handles making a request to the APIClientThrottle
  * for a place in the queue for API requests.
  */
 public class APIClientRequestor {
 
+
+
   // ================= variables =================
-  public Boolean inhibited = true;
-  public Boolean joinQueue = false;
+
+  Boolean inhibited = true;
+  public Boolean getInhibited() {
+    return inhibited;
+  }
+  Boolean joinQueue = false;
+
+  public Integer getPause() {
+    return pause;
+  }
+  public void setPause(Integer pause) {
+    this.pause = pause;
+  }
+  private Integer pause = 10;
 
   // ================= methods =================
 
@@ -17,15 +33,15 @@ public class APIClientRequestor {
    * and resets the control properties
    */
   public void acknowledgeRequest() {
-    this.inhibited = true;
-    this.joinQueue = false;
+    inhibited = true;
+    joinQueue = false;
   }
   /**
    * Reached head of queue and now dis-inhibited
    */
   public void deQueue() {
-    this.inhibited = false;
-    this.joinQueue = false;
+    inhibited = false;
+    joinQueue = false;
   }
   /**
    * Application is asking to join the API queue. typically
@@ -33,7 +49,18 @@ public class APIClientRequestor {
    * requestor.inhibited is true.
    */
   public void enQueue() {
-    this.inhibited = true;
-    this.joinQueue = true;
+    inhibited = true;
+    joinQueue = true;
+  }
+
+  /**
+   * Perform the actual wait for requestors appearance at head of Q
+   * Sleep is configurable via get and set pause functions
+   * @throws InterruptedException
+   */
+  public void waitInQ() throws InterruptedException {
+    while (inhibited) {
+      sleep(pause);
+    }
   }
 }

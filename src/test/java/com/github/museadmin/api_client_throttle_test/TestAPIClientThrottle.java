@@ -62,9 +62,7 @@ public class TestAPIClientThrottle {
     throttle.decrementLatency();
 
     // Wait until 6th requestor reaches head of Q and is dis-inhibited
-    while (r.inhibited) {
-      sleep(10);
-    }
+    r.waitInQ();
 
     throttle.stop();
 
@@ -100,9 +98,7 @@ public class TestAPIClientThrottle {
     throttle.incrementLatency();
 
     // Wait until 6th requestor reaches head of Q and is dis-inhibited
-    while (r.inhibited) {
-      sleep(10);
-    }
+    r.waitInQ();
 
     throttle.stop();
 
@@ -145,36 +141,6 @@ public class TestAPIClientThrottle {
   }
 
   @Test
-  public void testWaitWhileInhibited() throws InterruptedException {
-    // This test expresses the intended usage for applications.
-    // It registers 11 requestors and waits in a loop for the 11th
-    // requestor to reach the head of the Q and be dis-inhibited.
-    // All eleven requestors are dis-inhibited sequentially, one every 200 ms
-    throttle.setLatency(200);
-
-    registerNumberOfRequestors(10, throttle);
-    APIClientRequestor r = new APIClientRequestor();
-    // Register the 11th requestor with the throttle
-    throttle.registerRequestor(r);
-
-    // Can now request to be added to the throttle's Q asynchronously
-    r.enQueue();
-
-    // Now loop every <latency> ms maintaining the queue
-    throttle.start();
-    int loops = 0;
-    // Wait until 11th requestor reaches head of Q and is dis-inhibited
-    while (r.inhibited) {
-      loops++;
-      sleep(10);
-    }
-    throttle.stop();
-
-    // Confirm we looped while waiting for Q to be processed
-    assertTrue(loops > 150);
-  }
-
-  @Test
   public void testThreadsWaitWhileInhibited() throws InterruptedException {
 
     throttle.setLatency(200);
@@ -202,10 +168,10 @@ public class TestAPIClientThrottle {
     throttle.stop();
 
     // Confirm all references were processed and dis-inhibited
-    assertFalse(ts1.requestor.inhibited);
-    assertFalse(ts2.requestor.inhibited);
-    assertFalse(r1.inhibited);
-    assertFalse(r2.inhibited);
+    assertFalse(ts1.requestor.getInhibited());
+    assertFalse(ts2.requestor.getInhibited());
+    assertFalse(r1.getInhibited());
+    assertFalse(r2.getInhibited());
   }
 
   /**
@@ -230,14 +196,12 @@ public class TestAPIClientThrottle {
     public void run() {
 
       // Requestor is dis-inhibited after reaching the head of the queue.
-      while (requestor.inhibited) {
-        try {
-          sleep(10);
-        } catch (InterruptedException e) {
-          System.out.println("Thread " +  threadName + " interrupted.");
-          break;
-        }
+      try {
+        requestor.waitInQ();
+      } catch (InterruptedException e) {
+        System.out.println("Wait for head of Q failed");
       }
+
       // This is where a real client would send out the API request
       // after waiting for its place at the head of the queue.
     }

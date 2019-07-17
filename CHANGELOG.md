@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0] - 12-06-2019
+## [1.0] - 12-07-2019
 ### Added
 - Added Changelog and Readme
 - Update pom with developer details
@@ -15,7 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created unit tests
 - Uploaded to Github
 
-## [1.0] - 14-06-2019
+## [1.0] - 14-07-2019
 ### Added
 - Increment and Decrement functions for latency
 - Completed unit tests
+
+## [1.0] - 17-07-2019
+- Moved wait into requestor object form tests
